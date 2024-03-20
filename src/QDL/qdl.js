@@ -290,7 +290,7 @@ export function useQdl() {
 
         async function eraseDevice() {
           setMessage('Erasing userdata')
-          await qdl.current.resetUserdata()
+          //await qdl.current.resetUserdata()
           setProgress(0.9)
 
           setMessage('Rebooting')
