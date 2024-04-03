@@ -185,8 +185,8 @@ export class gpt {
     const headerOffset = this.sectorSize;
     const partentryOffset = 2 * this.sectorSize;
     const partentrySize = this.header.numPartEntries * this.header.partEntrySize;
-    const partdata = Uint8Array.from(data.slice(partentryOffset, partentryOffset + partentrySize));
-    let headerdata = Uint8Array.from(data.slice(headerOffset, headerOffset + this.header.headerSize));
+    const partdata = new Uint8Array(data.slice(partentryOffset, partentryOffset + partentrySize));
+    let headerdata = new Uint8Array(data.slice(headerOffset, headerOffset + this.header.headerSize));
 
     let view = new DataView(new ArrayBuffer(4));
     view.setInt32(0, CRC32.buf(Buffer.from(partdata)), true);
@@ -196,8 +196,9 @@ export class gpt {
     view.setInt32(0, CRC32.buf(Buffer.from(headerdata)), true);
     headerdata.set(new Uint8Array(view.buffer), 0x10);
 
-    data.set(headerdata, headerOffset);
-    return data;
+    let newData = new Uint8Array(data);
+    newData.set(headerdata, headerOffset);
+    return newData;
   }
 }
 
@@ -225,14 +226,14 @@ export function setPartitionFlags(flags, active, isBoot) {
 function checkHeaderCrc(gptData, guidGpt) {
   const headerOffset = guidGpt.sectorSize;
   const headerSize = guidGpt.header.headerSize;
-  const testGptData = guidGpt.fixGptCrc(gptData).buffer;
+  const testGptData = guidGpt.fixGptCrc(gptData);
   const testHeader = new Uint8Array(testGptData.slice(headerOffset, headerOffset + headerSize));
 
-  const headerCrc = guidGpt.header.crc32
+  const headerCrc = guidGpt.header.crc32;
   const testHeaderCrc = from4BytesToNumber(testHeader.slice(0x10, 0x10 + 4));
-  const partTableCrc = guidGpt.header.crc32PartEntries
+  const partTableCrc = guidGpt.header.crc32PartEntries;
   const testPartTableCrc = from4BytesToNumber(testHeader.slice(0x58, 0x58 + 4));
-  return [headerCrc !== testHeaderCrc || partTableCrc !== testPartTableCrc, partTableCrc];
+  return [(headerCrc !== testHeaderCrc) || (partTableCrc !== testPartTableCrc), testPartTableCrc];
 }
 
 
@@ -242,8 +243,8 @@ export function ensureGptHdrConsistency(gptData, backupGptData, guidGpt, backupG
   const [primCorrupted, primPartTableCrc] = checkHeaderCrc(gptData, guidGpt);
   const [backupCorrupted, backupPartTableCrc] = checkHeaderCrc(backupGptData, backupGuidGpt);
 
-  const headerConsistency = primPartTableCrc === backupPartTableCrc;
-  if (primCorrupted || !headerConsistency) {
+  const headerInconsistent = primPartTableCrc !== backupPartTableCrc;
+  if (primCorrupted || headerInconsistent) {
     if (backupCorrupted) {
       throw "Both primary and backup gpt headers are corrupted, cannot recover";
     }
