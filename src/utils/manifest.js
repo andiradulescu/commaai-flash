@@ -46,17 +46,9 @@ export class Image {
   constructor(json) {
     this.name = json.name
     this.sparse = json.sparse
-
-    if (this.name === 'system') {
-      this.checksum = json.alt.hash
-      this.fileName = `${this.name}-skip-chunks-${json.hash_raw}.img`
-      this.archiveUrl = json.alt.url
-    } else {
-      this.checksum = json.hash
-      this.fileName = `${this.name}-${json.hash_raw}.img`
-      this.archiveUrl = json.url
-    }
-
+    this.checksum = json.hash
+    this.fileName = `${this.name}-${json.hash_raw}.img`
+    this.archiveUrl = json.url
     this.size = json.size
   }
 }
