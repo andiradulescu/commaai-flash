@@ -243,7 +243,8 @@ export function useQdl() {
         setProgress(0)
 
         async function flashDevice() {
-          const currentSlot = await qdl.current.getActiveSlot();
+          const startTime = performance.now()
+          const currentSlot = await qdl.current.getActiveSlot()
           if (!['a', 'b'].includes(currentSlot)) {
             throw `Unknown current slot ${currentSlot}`
           }
@@ -265,6 +266,8 @@ export function useQdl() {
 
           setMessage(`Changing slot to ${otherSlot}`)
           await qdl.current.setActiveSlot(otherSlot)
+          const endTime = performance.now()
+          console.log(`Time taken to flash everything: ${((endTime - startTime) / 1000).toFixed(2)} seconds`)
         }
 
         flashDevice()
@@ -290,7 +293,7 @@ export function useQdl() {
 
         async function eraseDevice() {
           setMessage('Erasing userdata')
-          await resetUserdata()
+          // await resetUserdata()
           setProgress(0.9)
 
           setMessage('Rebooting')
