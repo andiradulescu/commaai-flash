@@ -101,7 +101,8 @@ export class qdlDevice {
     return [false];
   }
 
-  async flashBlob(partitionName, blob, onProgress=()=>{}) {
+async flashBlob(partitionName, blob, onProgress=()=>{}) {
+    const startTime = performance.now();
     let startSector = 0;
     let dp = await this.detectPartition(partitionName);
     const found = dp[0];
@@ -129,6 +130,8 @@ export class qdlDevice {
     } else {
       throw `Can't find partition ${partitionName}`;
     }
+    const endTime = performance.now();
+    console.log(`Time taken to flash ${partitionName}: ${((endTime - startTime) / 1000).toFixed(2)} seconds`);
     return true;
   }
 
