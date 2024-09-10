@@ -277,6 +277,7 @@ export function useFastboot() {
         setProgress(0)
 
         async function flashDevice() {
+          const startTime = performance.now();
           const currentSlot = await fastboot.current.getVariable('current-slot')
           if (!['a', 'b'].includes(currentSlot)) {
             throw `Unknown current slot ${currentSlot}`
@@ -291,13 +292,18 @@ export function useFastboot() {
               await fastboot.current.runCommand(`erase:${image.name}`)
             }
             setMessage(`Flashing ${image.name}`)
+            const flashStartTime = performance.now();
             await fastboot.current.flashBlob(image.name, blob, onProgress, 'other')
+            const flashEndTime = performance.now();
+            console.log(`Time taken to flash ${image.name}: ${((flashEndTime - flashStartTime) / 1000).toFixed(2)} seconds`);
           }
           console.debug('[fastboot] Flashed all partitions')
 
           const otherSlot = currentSlot === 'a' ? 'b' : 'a'
           setMessage(`Changing slot to ${otherSlot}`)
           await fastboot.current.runCommand(`set_active:${otherSlot}`)
+          const endTime = performance.now();
+          console.log(`Time taken to flash everything: ${((endTime - startTime) / 1000).toFixed(2)} seconds`);
         }
 
         flashDevice()
@@ -317,7 +323,7 @@ export function useFastboot() {
 
         async function eraseDevice() {
           setMessage('Erasing userdata')
-          await fastboot.current.runCommand('erase:userdata')
+          //await fastboot.current.runCommand('erase:userdata')
           setProgress(0.9)
 
           setMessage('Rebooting')
