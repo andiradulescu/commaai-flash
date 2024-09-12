@@ -274,11 +274,11 @@ export class Firehose {
     }
   }
 
-  async cmdReset() {
-    let data = '<?xml version="1.0" ?><data><power value="reset"/></data>';
+  async cmdReset(mode) {
+    let data = `<?xml version="1.0" ?><data><power value="${mode}"/></data>`;
     let val = await this.xmlSend(data);
     if (val.resp) {
-      console.log("Reset succeeded");
+      console.log(`Reset succeeded: ${val.log}`);
       return true;
     } else {
       throw "Firehose - Reset failed";

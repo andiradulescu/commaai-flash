@@ -1,5 +1,5 @@
 import { CommandHandler, cmd_t, sahara_mode_t, status_t, exec_cmd_t } from "./saharaDefs"
-import { concatUint8Array, packGenerator, readBlobAsBuffer } from "./utils";
+import { concatUint8Array, containsBytes, packGenerator, readBlobAsBuffer } from "./utils";
 import config from "@/config"
 
 
@@ -15,13 +15,40 @@ export class Sahara {
   }
 
   async connect() {
+    console.log('NEWLOG cdc.read');
     const v = await this.cdc?.read(0xC * 0x4);
     if (v.length > 1) {
+      console.log('NEWLOG v.length > 1');
       if (v[0] == 0x01) {
+        console.log('NEWLOG v[0] == 0x01');
         let pkt = this.ch.pkt_cmd_hdr(v);
         if (pkt.cmd === cmd_t.SAHARA_HELLO_REQ) {
           const rsp = this.ch.pkt_hello_req(v);
-          return { "mode" : "sahara", "cmd" : cmd_t.SAHARA_HELLO_REQ, "data" : rsp };
+          return { "mode": "sahara", "cmd": cmd_t.SAHARA_HELLO_REQ, "data": rsp };
+        } else if (pkt.cmd === cmd_t.SAHARA_END_TRANSFER) {
+          console.log('NEWLOG Sahara - connect pkt.cmd === cmd_t.SAHARA_END_TRANSFER')
+          const rsp = this.ch.pkt_image_end(v);
+          return { "mode": "sahara", "cmd": cmd_t.SAHARA_END_TRANSFER, "data": rsp };
+        }
+      } else if (containsBytes("<?xml", v)) {
+        console.log('NEWLOG Sahara - connect containsBytes("<?xml", v)')
+        return { "mode": "firehose" };
+      }
+    } else {
+      let data = "<?xml version=\"1.0\" ?><data><nop /></data>";
+      let dataToSend = new TextEncoder().encode(data);
+      console.log('NEWLOG writting nop');
+      await this.cdc?.write(dataToSend); //, null, true);
+      console.log('NEWLOG reading nop res');
+      let res = await this.cdc?.read();
+      if (containsBytes("<?xml", res)) {
+        console.log('NEWLOG Sahara - connect 2nd containsBytes("<?xml", v)')
+        return { "mode": "firehose" };
+      } else if (res.length > 0) {
+        if (res[0] == cmd_t.SAHARA_END_TRANSFER) {
+          console.log('NEWLOG Sahara - connect 2nd pkt.cmd === cmd_t.SAHARA_END_TRANSFER')
+          const rsp = this.ch.pkt_image_end(res);
+          return { "mode": "sahara", "cmd": cmd_t.SAHARA_END_TRANSFER, "data": rsp };
         }
       }
     }
@@ -135,7 +162,7 @@ export class Sahara {
     const programmerUrl = config.loader['url'];
     const response = await fetch(programmerUrl, { mode: 'cors' })
     if (!response.ok) {
-      throw `Sahara - Failed to fetch Loader: ${response.status} ${response.statusText}`;
+      throw `Sahara - Failed to fetch loader: ${response.status} ${response.statusText}`;
     }
 
     try {
@@ -177,7 +204,7 @@ export class Sahara {
     }
 
     await this.connect();
-    console.log("Uploading Programmer...");
+    console.log("Uploading loader...");
     await this.downloadLoader();
     const loaderBlob = await this.getLoader();
     let programmer = new Uint8Array(await readBlobAsBuffer(loaderBlob));
@@ -194,6 +221,13 @@ export class Sahara {
         cmd = resp["cmd"];
       } else {
         throw "Sahara - Timeout while uploading loader. Wrong loader?";
+      }
+      if (cmd == cmd_t.SAHARA_DONE_REQ) {
+        console.log('NEWLOG Sahara - loader already loaded? cmd == cmd_t.SAHARA_DONE_REQ')
+        if (await this.cmdDone()) {
+          console.log('NEWLOG Sahara - maybe loader is already loaded indeed - cmdDone')
+          return this.mode;
+        }
       }
       if (cmd == cmd_t.SAHARA_64BIT_MEMORY_READ_DATA) {
         let pkt = resp["data"];
@@ -223,7 +257,7 @@ export class Sahara {
           if (await this.cmdDone()) {
             console.log("Loader successfully uploaded");
           } else {
-            throw "Sahara - Failed to upload Loader";
+            throw "Sahara - Failed to upload loader";
           }
           return this.mode;
         }

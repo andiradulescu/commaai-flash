@@ -27,7 +27,16 @@ export class qdlDevice {
       await this.cdc?.connect();
       if (this.cdc.connected) {
         console.log("QDL device detected");
-        let resp = await runWithTimeout(this.sahara?.connect(), 10000);
+
+        let resp;
+        try {
+          resp = await runWithTimeout(this.sahara?.connect(), 10000);
+        } catch {
+          console.log("Resetting");
+          await this.reset("edl");
+          resp = await runWithTimeout(this.sahara?.connect(), 10000);
+        }
+
         if ("mode" in resp) {
           this.mode = resp["mode"];
           console.log("Mode detected:", this.mode);
@@ -314,8 +323,9 @@ async flashBlob(partitionName, blob, onProgress=()=>{}) {
     return true;
   }
 
-  async reset() {
-    await this.firehose.cmdReset();
+  // reset modes: reset, off, edl
+  async reset(mode="reset") {
+    await this.firehose.cmdReset(mode);
     return true;
   }
 }
