@@ -126,7 +126,7 @@ export function useQdl() {
         }
 
         imageWorker.current?.init()
-          .then(() => download(config.manifests['release']))
+          .then(() => download(config.manifests['ci']))
           .then(blob => blob.text())
           .then(text => {
             manifest.current = createManifest(text)
