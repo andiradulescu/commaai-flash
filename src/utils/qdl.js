@@ -316,10 +316,10 @@ export class QdlManager {
     this.setProgress(0)
 
     try {
-      this.setMessage('Erasing userdata')
-      const label = new Uint8Array(28).fill(0)  // sparse header size
-      label.set(new TextEncoder().encode('COMMA_RESET'), 0)
-      await this.qdl.flashBlob('userdata', new Blob([label]))
+      // this.setMessage('Erasing userdata')
+      // const label = new Uint8Array(28).fill(0)  // sparse header size
+      // label.set(new TextEncoder().encode('COMMA_RESET'), 0)
+      // await this.qdl.flashBlob('userdata', new Blob([label]))
       this.setProgress(0.9)
 
       this.setMessage('Rebooting')
