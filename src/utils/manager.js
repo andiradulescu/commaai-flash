@@ -12,6 +12,13 @@ if (FAST_MODE) {
   console.warn('[Flash] FAST MODE ENABLED - skipping system partition')
 }
 
+// Skip userdata - preserves existing user data on the device
+// Enable with ?nouserdata=1 in URL
+const NO_USERDATA = new URLSearchParams(window.location.search).has('nouserdata')
+if (NO_USERDATA) {
+  console.warn('[Flash] NO USERDATA MODE - userdata partition will not be formatted/flashed')
+}
+
 export const StepCode = {
   INITIALIZING: 0,
   READY: 1,
@@ -384,7 +391,11 @@ export class FlashManager {
       console.info('[Flash] Fast mode: skipping system partition')
     }
 
-    if (!systemImages.find((image) => image.name === this.#userdataImage)) {
+    // Skip userdata partition to preserve existing user data
+    if (NO_USERDATA) {
+      systemImages = systemImages.filter((image) => !image.name.startsWith('userdata_'))
+      console.info('[Flash] Skipping userdata partition')
+    } else if (!systemImages.find((image) => image.name === this.#userdataImage)) {
       console.error(`[Flash] Did not find userdata image "${this.#userdataImage}"`)
       this.#setError(ErrorCode.UNKNOWN)
       return

@@ -20,3 +20,4 @@ You can start editing the page by modifying `src/app/index.jsx`. The page auto-u
 * [chrome://device-log/](chrome://device-log/)
 * Add `?fast=1` to the URL to skip flashing the system partition (the slowest). Useful for testing the full flow quickly.
 * Add `?windows=1` to the URL to force Windows mode (shows Zadig driver instructions). Useful for testing the Windows flow on other platforms.
+* Add `?nouserdata=1` to the URL to skip flashing the userdata partition. Useful for re-flashing the system without resetting user data.
