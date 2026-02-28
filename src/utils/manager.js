@@ -361,6 +361,7 @@ export class FlashManager {
     try {
       // Erase each LUN, avoid erasing critical partitions and persist
       const critical = ['mbr', 'gpt']
+      if (NO_USERDATA) critical.push('userdata')
       for (const lun of luns) {
         const preserve = [...critical]
         if (lun === persistLun) preserve.push('persist')
