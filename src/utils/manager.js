@@ -45,43 +45,31 @@ export const ErrorCode = {
 
 /**
  * @param {any} storageInfo
- * @returns {string|null}
+ * @param {ManifestImage[]} manifest
+ * @returns {string}
  */
-export function checkCompatibleDevice(storageInfo) {
+export function checkCompatibleDevice(storageInfo, manifest) {
   // Should be the same for all comma 3/3X
   if (storageInfo.block_size !== 4096 || storageInfo.page_size !== 4096 ||
     storageInfo.num_physical !== 6 || storageInfo.mem_type !== 'UFS') {
     throw new Error('UFS chip parameters mismatch')
   }
 
-  // comma three
-  // userdata start 6159400 size 7986131
-  if (storageInfo.prod_name === 'H28S7Q302BMR' && storageInfo.manufacturer_id === 429 &&
-    storageInfo.total_blocks === 14145536) {
-    return 'userdata_30'
-  }
-  if (storageInfo.prod_name === 'H28U74301AMR' && storageInfo.manufacturer_id === 429 &&
-    storageInfo.total_blocks === 14145536) {
-    return 'userdata_30'
-  }
-  if (/64GB-UFS-MT( +)8QSP/.test(storageInfo.prod_name) && storageInfo.manufacturer_id === 300 &&
-    storageInfo.total_blocks === 14143488) {
-    return 'userdata_30'
+  const USERDATA_START_BLOCK = 6159400
+  const BACKUP_GPT_BLOCKS = 5
+  const BYTES_PER_GIB = 1024 ** 3
+  const userdataBlocks = storageInfo.total_blocks - USERDATA_START_BLOCK - BACKUP_GPT_BLOCKS
+  const userdataSizeGiB = Math.floor(userdataBlocks * storageInfo.block_size / BYTES_PER_GIB)
+  if (userdataSizeGiB <= 0) {
+    throw new Error('UFS chip does not have space for userdata')
   }
 
-  // comma 3X
-  // userdata start 6159400 size 23446483
-  if (storageInfo.prod_name === 'SDINDDH4-128G   1308' && storageInfo.manufacturer_id === 325 &&
-    storageInfo.total_blocks === 29605888) {
-    return 'userdata_89'
-  }
-  // unknown userdata sectors
-  if (storageInfo.prod_name === 'SDINDDH4-128G   1272' && storageInfo.manufacturer_id === 325 &&
-    storageInfo.total_blocks === 29775872) {
-    return 'userdata_90'
+  const userdataImage = `userdata_${userdataSizeGiB}`
+  if (!manifest.some((image) => image.name === userdataImage)) {
+    throw new Error(`Device storage requires unavailable userdata image "${userdataImage}"`)
   }
 
-  throw new Error('Could not identify UFS chip')
+  return userdataImage
 }
 
 /**
@@ -284,7 +272,7 @@ export class FlashManager {
     }
 
     try {
-      this.#userdataImage = checkCompatibleDevice(storageInfo)
+      this.#userdataImage = checkCompatibleDevice(storageInfo, this.manifest)
     } catch (e) {
       console.error('[Flash] Could not identify device:', e)
       console.error(storageInfo)
